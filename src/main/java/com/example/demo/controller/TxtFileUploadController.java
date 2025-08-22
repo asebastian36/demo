@@ -10,6 +10,9 @@ import org.springframework.web.multipart.MultipartFile;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.Map;
 import javax.imageio.ImageIO;
 
@@ -19,6 +22,9 @@ public class TxtFileUploadController {
     @Autowired
     private TextProcessingService textProcessingService;
     private String lastUploadedText = "";
+
+    // Directorio donde se guardarán los archivos
+    private static final String UPLOAD_DIR = "uploads";
 
     @GetMapping(value = { "/", "" })
     public String index() {
@@ -35,13 +41,28 @@ public class TxtFileUploadController {
             return ResponseEntity.badRequest().body("Only .txt files are allowed.");
         }
 
-        try (BufferedReader reader = new BufferedReader(
-                new InputStreamReader(file.getInputStream(), StandardCharsets.UTF_8))) {
-            StringBuilder content = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                content.append(line).append("\n");
+        try {
+            // Crear directorio si no existe
+            File uploadDir = new File(UPLOAD_DIR);
+            if (!uploadDir.exists()) {
+                uploadDir.mkdirs();
             }
+
+            // Guardar archivo (se reemplaza si existe uno con el mismo nombre)
+            String fileName = file.getOriginalFilename();
+            Path filePath = Paths.get(UPLOAD_DIR, fileName);
+            Files.write(filePath, file.getBytes());
+
+            // Leer contenido del archivo
+            StringBuilder content = new StringBuilder();
+            try (BufferedReader reader = new BufferedReader(
+                    new InputStreamReader(new FileInputStream(filePath.toFile()), StandardCharsets.UTF_8))) {
+                String line;
+                while ((line = reader.readLine()) != null) {
+                    content.append(line).append("\n");
+                }
+            }
+
             lastUploadedText = content.toString();
 
             // Redirección automática
