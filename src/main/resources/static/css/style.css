@@ -7,6 +7,8 @@
     --light-gray: #f8f9fa;
     --white: #ffffff;
     --shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    --error-color: #dc3545;
+    --success-color: #28a745;
 }
 
 /* Reset y estilos base */
@@ -33,20 +35,57 @@ body {
 
 /* Header */
 .header {
-    text-align: center;
-    padding: 2rem 1rem;
     background-color: var(--primary-color);
     color: var(--white);
+    padding: 1.5rem 2rem;
+}
+
+.header-content {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    max-width: 1200px;
+    margin: 0 auto;
+    flex-wrap: wrap;
+    gap: 1rem;
 }
 
 .header h1 {
     font-weight: 500;
     margin-bottom: 0.5rem;
+    font-size: 1.8rem;
 }
 
 .header p {
     font-weight: 300;
     opacity: 0.9;
+    font-size: 1rem;
+}
+
+.user-section {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.welcome-text {
+    font-weight: 400;
+}
+
+.logout-btn {
+    background-color: transparent;
+    color: var(--white);
+    border: 1px solid var(--white);
+    padding: 0.5rem 1rem;
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 0.9rem;
+}
+
+.logout-btn:hover {
+    background-color: var(--white);
+    color: var(--primary-color);
 }
 
 /* Contenido principal */
@@ -62,8 +101,8 @@ body {
     width: 100%;
 }
 
-/* Formulario */
-.upload-form {
+/* Formularios */
+.upload-form, .login-form {
     width: 100%;
     background: var(--white);
     padding: 2rem;
@@ -72,6 +111,39 @@ body {
     text-align: center;
 }
 
+.login-form-container {
+    width: 100%;
+    max-width: 400px;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+    text-align: left;
+}
+
+.form-label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: var(--text-color);
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.3s ease;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 2px rgba(67, 97, 238, 0.1);
+}
+
+/* File input */
 .file-input-container {
     margin-bottom: 1.5rem;
 }
@@ -106,6 +178,7 @@ body {
     color: var(--primary-color);
 }
 
+/* Botones */
 .submit-btn {
     background-color: var(--primary-color);
     color: white;
@@ -121,6 +194,33 @@ body {
 
 .submit-btn:hover {
     background-color: var(--primary-dark);
+}
+
+/* Mensajes de alerta */
+.alert-message {
+    padding: 1rem;
+    border-radius: 4px;
+    margin-bottom: 1rem;
+    text-align: center;
+}
+
+.alert-message.error {
+    background-color: #f8d7da;
+    color: var(--error-color);
+    border: 1px solid #f5c6cb;
+}
+
+.alert-message.success {
+    background-color: #d4edda;
+    color: var(--success-color);
+    border: 1px solid #c3e6cb;
+}
+
+.login-info {
+    margin-top: 1.5rem;
+    text-align: center;
+    color: #666;
+    font-size: 0.9rem;
 }
 
 /* Loading indicator */
@@ -156,16 +256,44 @@ body {
 }
 
 /* Responsive */
-@media (max-width: 600px) {
+@media (max-width: 768px) {
+    .header-content {
+        flex-direction: column;
+        text-align: center;
+    }
+
+    .user-section {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
     .main-content {
         padding: 1rem;
     }
 
-    .upload-form {
+    .upload-form, .login-form {
         padding: 1.5rem;
     }
 
     .header {
-        padding: 1.5rem 1rem;
+        padding: 1rem;
+    }
+
+    .header h1 {
+        font-size: 1.5rem;
+    }
+}
+
+@media (max-width: 480px) {
+    .header h1 {
+        font-size: 1.3rem;
+    }
+
+    .header p {
+        font-size: 0.9rem;
+    }
+
+    .upload-form, .login-form {
+        padding: 1rem;
     }
 }

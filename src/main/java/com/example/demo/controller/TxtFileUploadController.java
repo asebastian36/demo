@@ -26,11 +26,6 @@ public class TxtFileUploadController {
     // Directorio donde se guardarán los archivos
     private static final String UPLOAD_DIR = "uploads";
 
-    @GetMapping(value = { "/", "" })
-    public String index() {
-        return "index";
-    }
-
     @PostMapping("/uploadTxt")
     public ResponseEntity<?> handleTxtFileUpload(@RequestParam("file") MultipartFile file) {
         if (file.isEmpty()) {

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="es">
+<html xmlns:th="http://www.thymeleaf.org" lang="es">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -10,8 +10,18 @@
 <body>
 <div class="container">
     <header class="header">
-        <h1>Analizador de Frecuencia de Palabras</h1>
-        <p>Carga un archivo de texto para generar un histograma</p>
+        <div class="header-content">
+            <div>
+                <h1>Analizador de Frecuencia de Palabras</h1>
+                <p>Carga un archivo de texto para generar un histograma</p>
+            </div>
+            <div class="user-section">
+                <span class="welcome-text">Bienvenido: <span th:text="${#authentication.name}">Usuario</span></span>
+                <form th:action="@{/logout}" method="post" class="logout-form">
+                    <button type="submit" class="logout-btn">Cerrar Sesión</button>
+                </form>
+            </div>
+        </div>
     </header>
 
     <main class="main-content">
