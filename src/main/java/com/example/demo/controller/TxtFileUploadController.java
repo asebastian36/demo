@@ -5,15 +5,15 @@ import org.jfree.chart.JFreeChart;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
+import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 import java.awt.image.BufferedImage;
 import java.io.*;
 import java.nio.charset.StandardCharsets;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.Map;
+import java.nio.file.*;
+import java.util.*;
+import java.util.stream.Collectors;
 import javax.imageio.ImageIO;
 
 @Controller
@@ -21,29 +21,33 @@ public class TxtFileUploadController {
 
     @Autowired
     private TextProcessingService textProcessingService;
-    private String lastUploadedText = "";
 
     // Directorio donde se guardarán los archivos
     private static final String UPLOAD_DIR = "uploads";
 
     @PostMapping("/uploadTxt")
-    public ResponseEntity<?> handleTxtFileUpload(@RequestParam("file") MultipartFile file) {
+    public String handleTxtFileUpload(@RequestParam("file") MultipartFile file,
+                                      @RequestParam("analysisType") String analysisType,
+                                      Model model) {
         if (file.isEmpty()) {
-            return ResponseEntity.badRequest().body("Please select a file to upload.");
+            model.addAttribute("error", "Por favor selecciona un archivo para subir.");
+            return "index";
         }
 
         if (!"text/plain".equals(file.getContentType())) {
-            return ResponseEntity.badRequest().body("Only .txt files are allowed.");
+            model.addAttribute("error", "Solo se permiten archivos .txt.");
+            return "index";
         }
 
         try {
             // Crear directorio si no existe
             File uploadDir = new File(UPLOAD_DIR);
+
             if (!uploadDir.exists()) {
                 uploadDir.mkdirs();
             }
 
-            // Guardar archivo (se reemplaza si existe uno con el mismo nombre)
+            // Guardar archivo
             String fileName = file.getOriginalFilename();
             Path filePath = Paths.get(UPLOAD_DIR, fileName);
             Files.write(filePath, file.getBytes());
@@ -58,39 +62,59 @@ public class TxtFileUploadController {
                 }
             }
 
-            lastUploadedText = content.toString();
+            String lastUploadedText = content.toString();
+            // Valor por defecto
 
-            // Redirección automática
-            return ResponseEntity.status(HttpStatus.FOUND)
-                    .header(HttpHeaders.LOCATION, "/histograma")
-                    .build();
+            // Procesar según el tipo de análisis
+            Map<String, Integer> frequencies;
+            String analysisName = switch (analysisType) {
+                case "bigram" -> {
+                    frequencies = textProcessingService.countBigramFrequencies(lastUploadedText);
+                    yield "Bigramas";
+                }
+                case "trigram" -> {
+                    frequencies = textProcessingService.countTrigramFrequencies(lastUploadedText);
+                    yield "Trigramas";
+                }
+                default -> {
+                    frequencies = textProcessingService.countWordFrequencies(lastUploadedText);
+                    yield "Unigramas";
+                }
+            };
+
+            // Ordenar por frecuencia descendente
+            Map<String, Integer> sortedFrequencies = frequencies.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (e1, e2) -> e1,
+                            LinkedHashMap::new
+                    ));
+
+            // Generar el histograma y convertirlo a base64
+            String chartTitle = "Histograma de " + analysisName;
+            JFreeChart chart = textProcessingService.createHistogramChart(frequencies, chartTitle);
+
+            ByteArrayOutputStream baos = new ByteArrayOutputStream();
+            BufferedImage image = chart.createBufferedImage(1200, 700);
+            ImageIO.write(image, "png", baos);
+            String base64Image = Base64.getEncoder().encodeToString(baos.toByteArray());
+
+            // Agregar datos al modelo
+            model.addAttribute("frequencies", sortedFrequencies);
+            model.addAttribute("analysisType", analysisType);
+            model.addAttribute("analysisName", analysisName);
+            model.addAttribute("hasResults", true);
+            model.addAttribute("chartImage", base64Image);
+            model.addAttribute("chartTitle", chartTitle);
+            model.addAttribute("hasChart", true);
+
+            return "index";
 
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
-                    .body("Failed to upload or process file: " + e.getMessage());
-        }
-    }
-
-    @GetMapping(value = "/histograma", produces = MediaType.IMAGE_PNG_VALUE)
-    public ResponseEntity<byte[]> getHistogramChart() {
-        if (lastUploadedText.isEmpty()) {
-            return ResponseEntity.badRequest().body(null);
-        }
-
-        try {
-            Map<String, Integer> wordFrequencies = textProcessingService.countWordFrequencies(lastUploadedText);
-            JFreeChart chart = textProcessingService.createHistogramChart(wordFrequencies);
-
-            // Tamaño aumentado (Full HD: 1920x1080)
-            ByteArrayOutputStream baos = new ByteArrayOutputStream();
-            BufferedImage image = chart.createBufferedImage(1600, 900);
-            ImageIO.write(image, "png", baos);
-
-            return ResponseEntity.ok()
-                    .header("Content-Disposition", "inline; filename=histograma.png")
-                    .body(baos.toByteArray());
-        } catch (IOException e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(null);
+            model.addAttribute("error", "Error al procesar el archivo: " + e.getMessage());
+            return "index";
         }
     }
 }

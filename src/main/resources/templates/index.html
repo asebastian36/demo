@@ -25,7 +25,31 @@
     </header>
 
     <main class="main-content">
-        <form method="POST" action="/uploadTxt" enctype="multipart/form-data" class="upload-form">
+        <!-- Mensaje de error -->
+        <div th:if="${error}" class="error-message">
+            <p th:text="${error}"></p>
+        </div>
+
+        <form method="POST" action="/uploadTxt" enctype="multipart/form-data" class="upload-form" id="uploadForm">
+            <!-- Opciones de análisis -->
+            <div class="analysis-options">
+                <h3>Selecciona el tipo de análisis:</h3>
+                <div class="options-container">
+                    <label class="option-btn">
+                        <input type="radio" name="analysisType" value="unigram" checked>
+                        <span>Unigramas</span>
+                    </label>
+                    <label class="option-btn">
+                        <input type="radio" name="analysisType" value="bigram">
+                        <span>Bigramas</span>
+                    </label>
+                    <label class="option-btn">
+                        <input type="radio" name="analysisType" value="trigram">
+                        <span>Trigramas</span>
+                    </label>
+                </div>
+            </div>
+
             <div class="file-input-container">
                 <label for="txtFile" class="file-label">
                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-upload">
@@ -35,7 +59,7 @@
                     </svg>
                     <span id="file-name">Seleccionar archivo .txt</span>
                 </label>
-                <input type="file" id="txtFile" name="file" accept=".txt" class="file-input" />
+                <input type="file" id="txtFile" name="file" accept=".txt" class="file-input" required />
             </div>
             <button type="submit" class="submit-btn">Analizar Texto</button>
         </form>
@@ -44,6 +68,33 @@
             <div class="spinner"></div>
             <p>Procesando archivo...</p>
         </div>
+
+        <!-- Sección para mostrar resultados en tabla -->
+        <div th:if="${hasResults}" class="results-section">
+            <h2>Resultados del análisis: <span th:text="${analysisName}"></span></h2>
+            <div class="results-container">
+                <table class="results-table">
+                    <thead>
+                    <tr>
+                        <th>N-grama</th>
+                        <th>Frecuencia</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="entry : ${frequencies}">
+                        <td th:text="${entry.key}"></td>
+                        <td th:text="${entry.value}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <!-- Sección para mostrar el histograma -->
+        <div th:if="${hasChart}" class="histogram-section">
+            <h2 th:text="${chartTitle}">Histograma</h2>
+            <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Histograma" class="histogram-img">
+        </div>
     </main>
 
     <footer class="footer">
@@ -51,15 +102,6 @@
     </footer>
 </div>
 
-<script>
-    document.getElementById('txtFile').addEventListener('change', function(e) {
-        const fileName = e.target.files[0] ? e.target.files[0].name : 'Seleccionar archivo .txt';
-        document.getElementById('file-name').textContent = fileName;
-    });
-
-    document.querySelector('form').addEventListener('submit', function() {
-        document.getElementById('loading').style.display = 'block';
-    });
-</script>
+<script th:src="@{/js/script.js}"></script>
 </body>
 </html>

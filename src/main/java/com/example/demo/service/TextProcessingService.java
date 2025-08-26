@@ -20,13 +20,10 @@ public class TextProcessingService {
 
     public Map<String, Integer> countWordFrequencies(String text) {
         Map<String, Integer> frequencyMap = new HashMap<>();
-        Pattern pattern = Pattern.compile("\\p{L}+");
+        List<String> words = extractWords(text);
 
-        Matcher matcher = pattern.matcher(text);
-        while (matcher.find()) {
-            String word = matcher.group().toLowerCase();
-            // Filtramos palabras cortas y conectores
-            if(word.length() > 2 && !STOP_WORDS.contains(word)) {
+        for (String word : words) {
+            if(!STOP_WORDS.contains(word)) {
                 frequencyMap.merge(word, 1, Integer::sum);
             }
         }
@@ -34,16 +31,70 @@ public class TextProcessingService {
         return frequencyMap;
     }
 
-    public JFreeChart createHistogramChart(Map<String, Integer> wordFrequencies) {
+    public Map<String, Integer> countBigramFrequencies(String text) {
+        Map<String, Integer> frequencyMap = new HashMap<>();
+        List<String> words = extractWords(text);
+
+        // Filtrar palabras cortas y stop words
+        List<String> filteredWords = new ArrayList<>();
+        for (String word : words) {
+            if(!STOP_WORDS.contains(word)) {
+                filteredWords.add(word);
+            }
+        }
+
+        // Generar bigramas
+        for (int i = 0; i < filteredWords.size() - 1; i++) {
+            String bigram = filteredWords.get(i) + " " + filteredWords.get(i + 1);
+            frequencyMap.merge(bigram, 1, Integer::sum);
+        }
+
+        return frequencyMap;
+    }
+
+    public Map<String, Integer> countTrigramFrequencies(String text) {
+        Map<String, Integer> frequencyMap = new HashMap<>();
+        List<String> words = extractWords(text);
+
+        // Filtrar palabras cortas y stop words
+        List<String> filteredWords = new ArrayList<>();
+        for (String word : words) {
+            if(!STOP_WORDS.contains(word)) {
+                filteredWords.add(word);
+            }
+        }
+
+        // Generar trigramas
+        for (int i = 0; i < filteredWords.size() - 2; i++) {
+            String trigram = filteredWords.get(i) + " " + filteredWords.get(i + 1) + " " + filteredWords.get(i + 2);
+            frequencyMap.merge(trigram, 1, Integer::sum);
+        }
+
+        return frequencyMap;
+    }
+
+    private List<String> extractWords(String text) {
+        List<String> words = new ArrayList<>();
+        Pattern pattern = Pattern.compile("\\p{L}+");
+        Matcher matcher = pattern.matcher(text);
+
+        while (matcher.find()) {
+            words.add(matcher.group().toLowerCase());
+        }
+
+        return words;
+    }
+
+    public JFreeChart createHistogramChart(Map<String, Integer> frequencies, String title) {
         DefaultCategoryDataset dataset = new DefaultCategoryDataset();
 
-        wordFrequencies.entrySet().stream()
+        frequencies.entrySet().stream()
                 .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                 .limit(20)
                 .forEach(e -> dataset.addValue(e.getValue(), "Frecuencia", e.getKey()));
 
         JFreeChart chart = ChartFactory.createBarChart(
-                "Histograma de Palabras (Palabras Clave)",
+                title,
                 "Palabra",
                 "Frecuencia",
                 dataset,
