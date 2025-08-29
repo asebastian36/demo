@@ -33,11 +33,11 @@ public class TextProcessingService {
         return frequencyMap;
     }
 
-    public Map<String, Integer> countBigramFrequencies(String text) {
+    public NgramResult countNgramFrequencies(String text, int n) {
         Map<String, Integer> frequencyMap = new HashMap<>();
         List<String> words = extractWords(text);
 
-        // Filtrar palabras cortas y stop words
+        // Filtrar stop words
         List<String> filteredWords = new ArrayList<>();
         for (String word : words) {
             String normalizedWord = normalizeWord(word);
@@ -46,35 +46,33 @@ public class TextProcessingService {
             }
         }
 
-        // Generar bigramas
-        for (int i = 0; i < filteredWords.size() - 1; i++) {
-            String bigram = filteredWords.get(i) + " " + filteredWords.get(i + 1);
-            frequencyMap.merge(bigram, 1, Integer::sum);
+        // Validar y ajustar el tamaño del n-grama
+        int effectiveN = n;
+        if (n < 1) {
+            effectiveN = 1; // Mínimo 1-grama (unigrama)
+        } else if (n > filteredWords.size()) {
+            effectiveN = filteredWords.size(); // Ajustar al máximo posible
         }
 
-        return frequencyMap;
-    }
+        // Si effectiveN es 1, usar el método de unigramas para consistencia
+        if (effectiveN == 1) {
+            return new NgramResult(countWordFrequencies(text), effectiveN);
+        }
 
-    public Map<String, Integer> countTrigramFrequencies(String text) {
-        Map<String, Integer> frequencyMap = new HashMap<>();
-        List<String> words = extractWords(text);
-
-        // Filtrar palabras cortas y stop words
-        List<String> filteredWords = new ArrayList<>();
-        for (String word : words) {
-            String normalizedWord = normalizeWord(word);
-            if(!STOP_WORDS.contains(normalizedWord)) {
-                filteredWords.add(normalizedWord);
+        // Generar n-gramas
+        for (int i = 0; i <= filteredWords.size() - effectiveN; i++) {
+            StringBuilder ngramBuilder = new StringBuilder();
+            for (int j = 0; j < effectiveN; j++) {
+                if (j > 0) {
+                    ngramBuilder.append(" ");
+                }
+                ngramBuilder.append(filteredWords.get(i + j));
             }
+            String ngram = ngramBuilder.toString();
+            frequencyMap.merge(ngram, 1, Integer::sum);
         }
 
-        // Generar trigramas
-        for (int i = 0; i < filteredWords.size() - 2; i++) {
-            String trigram = filteredWords.get(i) + " " + filteredWords.get(i + 1) + " " + filteredWords.get(i + 2);
-            frequencyMap.merge(trigram, 1, Integer::sum);
-        }
-
-        return frequencyMap;
+        return new NgramResult(frequencyMap, effectiveN);
     }
 
     private List<String> extractWords(String text) {

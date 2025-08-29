@@ -1,6 +1,7 @@
 package com.example.demo.controller;
 
 import com.example.demo.service.TextProcessingService;
+import com.example.demo.service.NgramResult;
 import org.jfree.chart.JFreeChart;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.*;
@@ -28,6 +29,7 @@ public class TxtFileUploadController {
     @PostMapping("/uploadTxt")
     public String handleTxtFileUpload(@RequestParam("file") MultipartFile file,
                                       @RequestParam("analysisType") String analysisType,
+                                      @RequestParam(value = "ngramSize", required = false, defaultValue = "2") Integer ngramSize,
                                       Model model) {
         if (file.isEmpty()) {
             model.addAttribute("error", "Por favor selecciona un archivo para subir.");
@@ -40,6 +42,12 @@ public class TxtFileUploadController {
         }
 
         try {
+            // Validar ngramSize si es necesario
+            if ("ngram".equals(analysisType) && (ngramSize < 2)) {
+                model.addAttribute("error", "El tamaño del n-grama debe ser mayor a 2");
+                return "index";
+            }
+
             // Crear directorio si no existe
             File uploadDir = new File(UPLOAD_DIR);
 
@@ -63,24 +71,23 @@ public class TxtFileUploadController {
             }
 
             String lastUploadedText = content.toString();
-            // Valor por defecto
 
-            // Procesar según el tipo de análisis
+            // Procesar según el tipo de análisis (lógica simplificada)
             Map<String, Integer> frequencies;
-            String analysisName = switch (analysisType) {
-                case "bigram" -> {
-                    frequencies = textProcessingService.countBigramFrequencies(lastUploadedText);
-                    yield "Bigramas";
-                }
-                case "trigram" -> {
-                    frequencies = textProcessingService.countTrigramFrequencies(lastUploadedText);
-                    yield "Trigramas";
-                }
-                default -> {
-                    frequencies = textProcessingService.countWordFrequencies(lastUploadedText);
-                    yield "Unigramas";
-                }
-            };
+            String analysisName;
+            Integer actualNgramSize = null;
+
+            if ("ngram".equals(analysisType)) {
+                NgramResult ngramResult = textProcessingService.countNgramFrequencies(lastUploadedText, ngramSize);
+                frequencies = ngramResult.getFrequencies();
+                actualNgramSize = ngramResult.getEffectiveN();
+                analysisName = actualNgramSize + "-gramas";
+            } else {
+                // Por defecto es unigrama
+                frequencies = textProcessingService.countWordFrequencies(lastUploadedText);
+                analysisName = "Unigramas";
+                actualNgramSize = 1;
+            }
 
             // Ordenar por frecuencia descendente
             Map<String, Integer> sortedFrequencies = frequencies.entrySet().stream()
@@ -105,6 +112,8 @@ public class TxtFileUploadController {
             model.addAttribute("frequencies", sortedFrequencies);
             model.addAttribute("analysisType", analysisType);
             model.addAttribute("analysisName", analysisName);
+            model.addAttribute("actualNgramSize", actualNgramSize);
+            model.addAttribute("requestedNgramSize", ngramSize);
             model.addAttribute("hasResults", true);
             model.addAttribute("chartImage", base64Image);
             model.addAttribute("chartTitle", chartTitle);

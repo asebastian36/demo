@@ -30,23 +30,40 @@
             <p th:text="${error}"></p>
         </div>
 
+        <!-- Mensaje informativo cuando el n-grama se ajusta -->
+        <div th:if="${analysisType == 'ngram' and actualNgramSize != requestedNgramSize}"
+             class="info-message" style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; margin: 15px 0; border-radius: 4px;">
+            <p style="margin: 0; color: #1976d2;">
+                <strong>Nota:</strong> Se utilizó <span th:text="${actualNgramSize}"></span>-gramas en lugar de
+                <span th:text="${requestedNgramSize}"></span>-gramas solicitados, debido a la longitud del texto.
+            </p>
+        </div>
+
         <form method="POST" action="/uploadTxt" enctype="multipart/form-data" class="upload-form" id="uploadForm">
             <!-- Opciones de análisis -->
             <div class="analysis-options">
                 <h3>Selecciona el tipo de análisis:</h3>
                 <div class="options-container">
                     <label class="option-btn">
-                        <input type="radio" name="analysisType" value="unigram" checked>
+                        <input type="radio" name="analysisType" value="unigram" id="unigramRadio" checked>
                         <span>Unigramas</span>
                     </label>
                     <label class="option-btn">
-                        <input type="radio" name="analysisType" value="bigram">
-                        <span>Bigramas</span>
+                        <input type="radio" name="analysisType" value="ngram" id="ngramRadio">
+                        <span>N-gramas</span>
                     </label>
-                    <label class="option-btn">
-                        <input type="radio" name="analysisType" value="trigram">
-                        <span>Trigramas</span>
+                </div>
+
+                <!-- Campo para especificar el tamaño del n-grama (solo visible cuando se selecciona ngram) -->
+                <div id="ngramSizeContainer" style="display: none; margin-top: 15px;">
+                    <label for="ngramSize" style="display: block; margin-bottom: 5px; font-weight: 500;">
+                        Tamaño del N-grama:
                     </label>
+                    <input type="number" id="ngramSize" name="ngramSize" min="2"
+                           class="ngram-input" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 80px;">
+                    <small style="display: block; margin-top: 5px; color: #666;">
+                        Ingresa un número entero mayor a 2
+                    </small>
                 </div>
             </div>
 
