@@ -7,6 +7,7 @@ import org.jfree.data.category.DefaultCategoryDataset;
 import org.springframework.stereotype.Service;
 import java.util.*;
 import java.util.regex.*;
+import java.text.Normalizer;
 
 @Service
 public class TextProcessingService {
@@ -15,7 +16,7 @@ public class TextProcessingService {
     private static final Set<String> STOP_WORDS = Set.of(
             "el", "la", "los", "las", "un", "una", "unos", "unas",
             "de", "del", "a", "al", "y", "o", "pero", "se", "que",
-            "por", "con", "este", "esta", "estos"
+            "por", "con", "este", "esta", "estos", "en", "es"
     );
 
     public Map<String, Integer> countWordFrequencies(String text) {
@@ -23,8 +24,9 @@ public class TextProcessingService {
         List<String> words = extractWords(text);
 
         for (String word : words) {
-            if(!STOP_WORDS.contains(word)) {
-                frequencyMap.merge(word, 1, Integer::sum);
+            String normalizedWord = normalizeWord(word);
+            if(!STOP_WORDS.contains(normalizedWord)) {
+                frequencyMap.merge(normalizedWord, 1, Integer::sum);
             }
         }
 
@@ -38,8 +40,9 @@ public class TextProcessingService {
         // Filtrar palabras cortas y stop words
         List<String> filteredWords = new ArrayList<>();
         for (String word : words) {
-            if(!STOP_WORDS.contains(word)) {
-                filteredWords.add(word);
+            String normalizedWord = normalizeWord(word);
+            if(!STOP_WORDS.contains(normalizedWord)) {
+                filteredWords.add(normalizedWord);
             }
         }
 
@@ -59,8 +62,9 @@ public class TextProcessingService {
         // Filtrar palabras cortas y stop words
         List<String> filteredWords = new ArrayList<>();
         for (String word : words) {
-            if(!STOP_WORDS.contains(word)) {
-                filteredWords.add(word);
+            String normalizedWord = normalizeWord(word);
+            if(!STOP_WORDS.contains(normalizedWord)) {
+                filteredWords.add(normalizedWord);
             }
         }
 
@@ -79,10 +83,30 @@ public class TextProcessingService {
         Matcher matcher = pattern.matcher(text);
 
         while (matcher.find()) {
-            words.add(matcher.group().toLowerCase());
+            words.add(matcher.group());
         }
 
         return words;
+    }
+
+    /**
+     * Normaliza una palabra: convierte a minúsculas y elimina acentos
+     * @param word Palabra a normalizar
+     * @return Palabra normalizada en minúsculas y sin acentos
+     */
+    private String normalizeWord(String word) {
+        if (word == null || word.isEmpty()) {
+            return word;
+        }
+
+        // Convertir a minúsculas
+        String lowerCaseWord = word.toLowerCase();
+
+        // Eliminar acentos y diacríticos
+        String normalized = Normalizer.normalize(lowerCaseWord, Normalizer.Form.NFD);
+        Pattern pattern = Pattern.compile("\\p{InCombiningDiacriticalMarks}+");
+
+        return pattern.matcher(normalized).replaceAll("");
     }
 
     public JFreeChart createHistogramChart(Map<String, Integer> frequencies, String title) {
