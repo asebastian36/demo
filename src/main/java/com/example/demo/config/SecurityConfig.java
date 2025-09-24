@@ -18,7 +18,7 @@ public class SecurityConfig {
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
         http
                 .authorizeHttpRequests(authz -> authz
-                        .requestMatchers("/css/**", "/js/**", "/images/**").permitAll()
+                        .requestMatchers("/css/**", "/js/**", "/images/**", "/uploadTxt", "/suggest").permitAll()
                         .requestMatchers("/login").permitAll()
                         .anyRequest().authenticated()
                 )
@@ -33,8 +33,7 @@ public class SecurityConfig {
                         .permitAll()
                 )
                 .csrf(csrf -> csrf
-                        // Deshabilitar CSRF para endpoints de API que reciben files
-                        .ignoringRequestMatchers("/uploadTxt")
+                        .ignoringRequestMatchers("/uploadTxt", "/suggest") // <-- Añadido aquí también
                 );
 
         return http.build();

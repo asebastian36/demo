@@ -97,6 +97,51 @@
             <p>Procesando archivo...</p>
         </div>
 
+        <!-- Sección de AUTOCOMPLETADO -->
+        <div th:if="${hasResults}" class="results-section" style="margin-top: 40px;">
+            <h2>🔍 Autocompletado de Texto</h2>
+            <form method="POST" action="/suggest" style="margin-bottom: 20px;">
+                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: end;">
+                    <div style="flex: 1; min-width: 200px;">
+                        <label for="partialText" style="display: block; margin-bottom: 5px; font-weight: 500;">
+                            Escribe un texto parcial:
+                        </label>
+                        <input type="text" id="partialText" name="partialText"
+                               th:value="${partialText}"
+                               class="ngram-input"
+                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
+                               placeholder="Ej: el perro">
+                    </div>
+                    <button type="submit" class="submit-btn" style="padding: 8px 16px;">Sugerir</button>
+                </div>
+            </form>
+
+            <div th:if="${suggestionError}" class="error-message">
+                <p th:text="${suggestionError}"></p>
+            </div>
+
+            <div th:if="${bestSuggestion}" style="margin-top: 20px;">
+                <h3>✅ Sugerencia principal:</h3>
+                <p style="font-size: 1.2em; font-weight: bold; color: #007bff;" th:text="${bestSuggestion}"></p>
+
+                <h3 style="margin-top: 20px;">📊 Top 3 sugerencias:</h3>
+                <table class="results-table">
+                    <thead>
+                    <tr>
+                        <th>Palabra sugerida</th>
+                        <th>Probabilidad (MLE)</th>
+                    </tr>
+                    </thead>
+                    <tbody>
+                    <tr th:each="sug : ${suggestions}">
+                        <td th:text="${sug.word}"></td>
+                        <td th:text="${#numbers.formatDecimal(sug.probability, 1, 4)}"></td>
+                    </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
         <!-- Sección para mostrar resultados en tabla -->
         <div th:if="${hasResults}" class="results-section">
             <h2>Resultados del análisis: <span th:text="${analysisName}"></span></h2>

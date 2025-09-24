@@ -2,9 +2,10 @@ package com.example.demo.controller;
 
 import com.example.demo.service.TextProcessingService;
 import com.example.demo.service.NgramResult;
+import com.example.demo.service.AutocompleteService;
+import jakarta.servlet.http.HttpSession;
 import org.jfree.chart.JFreeChart;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.*;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,9 @@ public class TxtFileUploadController {
     @Autowired
     private TextProcessingService textProcessingService;
 
+    @Autowired
+    private AutocompleteService autocompleteService;
+
     private static final String UPLOAD_DIR = "uploads";
 
     @PostMapping("/uploadTxt")
@@ -31,7 +35,8 @@ public class TxtFileUploadController {
                                       @RequestParam("analysisType") String analysisType,
                                       @RequestParam(value = "ngramSize", required = false, defaultValue = "2") Integer ngramSize,
                                       @RequestParam(value = "withBoundaries", required = false, defaultValue = "false") Boolean withBoundaries,
-                                      Model model) {
+                                      Model model,
+                                      HttpSession session) {
         if (file.isEmpty()) {
             model.addAttribute("error", "Por favor selecciona un archivo para subir.");
             return "index";
@@ -116,6 +121,12 @@ public class TxtFileUploadController {
                 usedBoundaries = withBoundaries;
             }
 
+            // ✅ Guardar modelo en SESIÓN (persiste entre peticiones)
+            session.setAttribute("probabilities", probabilities);
+            session.setAttribute("ngramSize", actualNgramSize);
+            session.setAttribute("withBoundaries", usedBoundaries);
+
+            // Preparar vista
             Map<String, Integer> sortedFrequencies = frequencies.entrySet().stream()
                     .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                     .collect(Collectors.toMap(
@@ -151,5 +162,44 @@ public class TxtFileUploadController {
             model.addAttribute("error", "Error al procesar el archivo: " + e.getMessage());
             return "index";
         }
+    }
+
+    @PostMapping("/suggest")
+    public String suggestWord(@RequestParam("partialText") String partialText,
+                              Model model,
+                              HttpSession session) {
+        model.addAttribute("hasResults", true);
+        model.addAttribute("partialText", partialText);
+
+        try {
+            // 🔍 Recuperar modelo de la SESIÓN
+            @SuppressWarnings("unchecked")
+            Map<String, Double> probabilities = (Map<String, Double>) session.getAttribute("probabilities");
+            Integer ngramSize = (Integer) session.getAttribute("ngramSize");
+            Boolean withBoundaries = (Boolean) session.getAttribute("withBoundaries");
+
+            // Validar que el modelo exista
+            if (probabilities == null || probabilities.isEmpty() || ngramSize == null) {
+                model.addAttribute("suggestionError", "Primero debes subir un archivo y entrenar el modelo.");
+                return "index";
+            }
+
+            // Llamar al servicio de autocompletado
+            AutocompleteService.SuggestionResult result = autocompleteService.suggestNextWord(
+                    partialText,
+                    probabilities,
+                    ngramSize,
+                    Boolean.TRUE.equals(withBoundaries),
+                    textProcessingService
+            );
+
+            model.addAttribute("bestSuggestion", result.getBestSuggestion());
+            model.addAttribute("suggestions", result.getTopSuggestions());
+
+        } catch (Exception e) {
+            model.addAttribute("suggestionError", "No se encontraron sugerencias para: \"" + partialText + "\"");
+        }
+
+        return "index";
     }
 }

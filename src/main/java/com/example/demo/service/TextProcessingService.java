@@ -5,7 +5,6 @@ import org.jfree.chart.JFreeChart;
 import org.jfree.chart.plot.PlotOrientation;
 import org.jfree.data.category.DefaultCategoryDataset;
 import org.springframework.stereotype.Service;
-
 import java.util.*;
 import java.util.regex.*;
 import java.text.Normalizer;
