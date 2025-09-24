@@ -21,10 +21,9 @@ public class AutocompleteService {
         public List<Map<String, Object>> getTopSuggestions() { return topSuggestions; }
     }
 
-    // 🔥 Eliminado 'frequencies' del método
     public SuggestionResult suggestNextWord(
             String partialText,
-            Map<String, Double> probabilities, // ← solo probabilidades
+            Map<String, Double> probabilities,
             int ngramSize,
             boolean withBoundaries,
             TextProcessingService textProcessingService) {

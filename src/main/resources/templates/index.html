@@ -5,22 +5,20 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Analizador de Texto</title>
     <link rel="stylesheet" th:href="@{/css/style.css}">
-    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;600&display=swap" rel="stylesheet">
 </head>
 <body>
 <div class="container">
     <header class="header">
-        <div class="header-content">
-            <div>
-                <h1>Analizador de Frecuencia de Palabras</h1>
-                <p>Carga un archivo de texto para generar un histograma</p>
-            </div>
-            <div class="user-section">
-                <span class="welcome-text">Bienvenido: <span th:text="${#authentication.name}">Usuario</span></span>
-                <form th:action="@{/logout}" method="post" class="logout-form">
-                    <button type="submit" class="logout-btn">Cerrar Sesión</button>
-                </form>
-            </div>
+        <div>
+            <h1>Analizador de Frecuencia de Palabras</h1>
+            <p>Carga un archivo de texto para generar un histograma</p>
+        </div>
+        <div class="user-section">
+            <span class="welcome-text">Bienvenido: <span th:text="${#authentication.name}">Usuario</span></span>
+            <form th:action="@{/logout}" method="post" class="logout-form">
+                <button type="submit" class="logout-btn">Cerrar Sesión</button>
+            </form>
         </div>
     </header>
 
@@ -30,119 +28,113 @@
             <p th:text="${error}"></p>
         </div>
 
-        <!-- Mensaje informativo cuando el n-grama se ajusta -->
-        <div th:if="${analysisType == 'ngram' and actualNgramSize != requestedNgramSize}"
-             class="info-message" style="background-color: #e3f2fd; border-left: 4px solid #2196f3; padding: 12px; margin: 15px 0; border-radius: 4px;">
-            <p style="margin: 0; color: #1976d2;">
+        <!-- Mensaje informativo n-grama ajustado -->
+        <div th:if="${analysisType == 'ngram' and actualNgramSize != requestedNgramSize}" class="info-message">
+            <p>
                 <strong>Nota:</strong> Se utilizó <span th:text="${actualNgramSize}"></span>-gramas en lugar de
                 <span th:text="${requestedNgramSize}"></span>-gramas solicitados, debido a la longitud del texto.
             </p>
         </div>
 
-        <form method="POST" action="/uploadTxt" enctype="multipart/form-data" class="upload-form" id="uploadForm">
-            <!-- Opciones de análisis -->
-            <div class="analysis-options">
-                <h3>Selecciona el tipo de análisis:</h3>
-                <div class="options-container">
-                    <label class="option-btn">
-                        <input type="radio" name="analysisType" value="unigram" id="unigramRadio" checked>
-                        <span>Unigramas</span>
-                    </label>
-                    <label class="option-btn">
-                        <input type="radio" name="analysisType" value="ngram" id="ngramRadio">
-                        <span>N-gramas</span>
-                    </label>
+        <!-- Formulario de carga: SOLO se muestra si NO hay resultados -->
+        <div th:unless="${hasResults}" class="upload-form" id="uploadFormContainer">
+            <form method="POST" action="/uploadTxt" enctype="multipart/form-data" id="uploadForm">
+                <div class="analysis-options">
+                    <h3>Selecciona el tipo de análisis:</h3>
+                    <div class="options-container">
+                        <label class="option-btn">
+                            <input type="radio" name="analysisType" value="unigram" id="unigramRadio" checked>
+                            <span>Unigramas</span>
+                        </label>
+                        <label class="option-btn">
+                            <input type="radio" name="analysisType" value="ngram" id="ngramRadio">
+                            <span>N-gramas</span>
+                        </label>
+                    </div>
+
+                    <div id="ngramSizeContainer" style="display: none; margin-top: 15px;">
+                        <label for="ngramSize" style="display: block; margin-bottom: 5px; font-weight: 500;">
+                            Tamaño del N-grama:
+                        </label>
+                        <input type="number" id="ngramSize" name="ngramSize" min="2" value="2" class="form-control" style="width: 100px;">
+                        <small style="display: block; margin-top: 5px; color: #666;">
+                            Ingresa un número entero mayor o igual a 2
+                        </small>
+                    </div>
+
+                    <div style="margin-top: 20px; padding: 15px; background: #f1f8ff; border-radius: 8px;">
+                        <label style="font-weight: 500; display: flex; align-items: center; gap: 8px;">
+                            <input type="checkbox" name="withBoundaries" value="true" />
+                            <span>Incluir fronteras de oración (<s> y </s>)</span>
+                        </label>
+                        <p style="margin-top: 8px; font-size: 13px; color: #555;">
+                            Agrega tokens de inicio y fin de oración para mejorar el modelo lingüístico.
+                        </p>
+                    </div>
                 </div>
 
-                <!-- Campo para especificar el tamaño del n-grama -->
-                <div id="ngramSizeContainer" style="display: none; margin-top: 15px;">
-                    <label for="ngramSize" style="display: block; margin-bottom: 5px; font-weight: 500;">
-                        Tamaño del N-grama:
+                <div class="file-input-container">
+                    <label for="txtFile" class="file-label">
+                        <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
+                            <polyline points="17 8 12 3 7 8"></polyline>
+                            <line x1="12" y1="3" x2="12" y2="15"></line>
+                        </svg>
+                        <span id="file-name">Seleccionar archivo .txt</span>
                     </label>
-                    <input type="number" id="ngramSize" name="ngramSize" min="2" value="2"
-                           class="ngram-input" style="padding: 8px; border: 1px solid #ddd; border-radius: 4px; width: 80px;">
-                    <small style="display: block; margin-top: 5px; color: #666;">
-                        Ingresa un número entero mayor o igual a 2
-                    </small>
+                    <input type="file" id="txtFile" name="file" accept=".txt" class="file-input" required />
                 </div>
-
-                <!-- Checkbox para fronteras de oración -->
-                <div style="margin-top: 20px; padding: 15px; background: #f1f8ff; border-radius: 8px;">
-                    <label style="font-weight: 500; display: flex; align-items: center; gap: 8px;">
-                        <input type="checkbox" name="withBoundaries" value="true" />
-                        <span>Incluir fronteras de oración (<s> y </s>)</span>
-                    </label>
-                    <p style="margin-top: 8px; font-size: 13px; color: #555;">
-                        Agrega tokens de inicio y fin de oración para mejorar el modelo lingüístico.
-                    </p>
-                </div>
-            </div>
-
-            <div class="file-input-container">
-                <label for="txtFile" class="file-label">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-upload">
-                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path>
-                        <polyline points="17 8 12 3 7 8"></polyline>
-                        <line x1="12" y1="3" x2="12" y2="15"></line>
-                    </svg>
-                    <span id="file-name">Seleccionar archivo .txt</span>
-                </label>
-                <input type="file" id="txtFile" name="file" accept=".txt" class="file-input" required />
-            </div>
-            <button type="submit" class="submit-btn">Analizar Texto</button>
-        </form>
+                <button type="submit" class="submit-btn">Analizar Texto</button>
+            </form>
+        </div>
 
         <div class="loading-indicator" id="loading" style="display: none;">
             <div class="spinner"></div>
             <p>Procesando archivo...</p>
         </div>
 
-        <!-- Sección de AUTOCOMPLETADO -->
-        <div th:if="${hasResults}" class="results-section" style="margin-top: 40px;">
+        <!-- Sección de AUTOCOMPLETADO (siempre visible cuando hay resultados) -->
+        <div th:if="${hasResults}" class="results-section autocomplete-section">
             <h2>🔍 Autocompletado de Texto</h2>
-            <form method="POST" action="/suggest" style="margin-bottom: 20px;">
-                <div style="display: flex; gap: 10px; flex-wrap: wrap; align-items: end;">
-                    <div style="flex: 1; min-width: 200px;">
-                        <label for="partialText" style="display: block; margin-bottom: 5px; font-weight: 500;">
-                            Escribe un texto parcial:
-                        </label>
-                        <input type="text" id="partialText" name="partialText"
-                               th:value="${partialText}"
-                               class="ngram-input"
-                               style="width: 100%; padding: 8px; border: 1px solid #ddd; border-radius: 4px;"
-                               placeholder="Ej: el perro">
-                    </div>
-                    <button type="submit" class="submit-btn" style="padding: 8px 16px;">Sugerir</button>
+            <form method="POST" action="/suggest" class="autocomplete-form">
+                <div>
+                    <label for="partialText">Escribe un texto parcial:</label>
+                    <input type="text" id="partialText" name="partialText"
+                           th:value="${partialText}"
+                           placeholder="Ej: el perro" required>
                 </div>
+                <button type="submit" class="submit-btn">Sugerir</button>
             </form>
 
             <div th:if="${suggestionError}" class="error-message">
                 <p th:text="${suggestionError}"></p>
             </div>
 
-            <div th:if="${bestSuggestion}" style="margin-top: 20px;">
+            <div th:if="${bestSuggestion}">
                 <h3>✅ Sugerencia principal:</h3>
-                <p style="font-size: 1.2em; font-weight: bold; color: #007bff;" th:text="${bestSuggestion}"></p>
+                <p style="font-size: 1.3em; font-weight: bold; color: var(--primary);" th:text="${bestSuggestion}"></p>
 
                 <h3 style="margin-top: 20px;">📊 Top 3 sugerencias:</h3>
-                <table class="results-table">
-                    <thead>
-                    <tr>
-                        <th>Palabra sugerida</th>
-                        <th>Probabilidad (MLE)</th>
-                    </tr>
-                    </thead>
-                    <tbody>
-                    <tr th:each="sug : ${suggestions}">
-                        <td th:text="${sug.word}"></td>
-                        <td th:text="${#numbers.formatDecimal(sug.probability, 1, 4)}"></td>
-                    </tr>
-                    </tbody>
-                </table>
+                <div class="results-container">
+                    <table class="results-table">
+                        <thead>
+                        <tr>
+                            <th>Palabra sugerida</th>
+                            <th>Probabilidad (MLE)</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="sug : ${suggestions}">
+                            <td th:text="${sug.word}"></td>
+                            <td th:text="${#numbers.formatDecimal(sug.probability, 1, 4)}"></td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
 
-        <!-- Sección para mostrar resultados en tabla -->
+        <!-- Resultados principales (solo si hay resultados) -->
         <div th:if="${hasResults}" class="results-section">
             <h2>Resultados del análisis: <span th:text="${analysisName}"></span></h2>
             <div class="results-container">
@@ -164,22 +156,22 @@
                 </table>
             </div>
 
-            <!-- Mostrar corpus tokenizado -->
-            <div style="margin-top: 30px; padding: 20px; background: #f8f9fa; border-radius: 8px; font-family: monospace; font-size: 0.9em;">
+            <!-- Corpus tokenizado: solo en resultados principales, NO en autocompletado -->
+            <div class="tokenized-corpus">
                 <h4>📜 Corpus Tokenizado:</h4>
-                <p style="word-wrap: break-word; white-space: pre-wrap;" th:text="${tokenizedCorpus}"></p>
+                <p th:text="${tokenizedCorpus}"></p>
             </div>
 
             <!-- Reflexión sobre fronteras -->
-            <div th:if="${withBoundaries}" style="margin-top: 30px; padding: 20px; background: #fff3cd; border-left: 4px solid #ffc107; border-radius: 6px;">
-                <h4 style="margin-top: 0; color: #856404;">📌 Reflexión sobre el uso de fronteras de oración</h4>
-                <p style="margin-bottom: 0; color: #856404;">
+            <div th:if="${withBoundaries}" class="reflection-box">
+                <h4>📌 Reflexión sobre el uso de fronteras de oración</h4>
+                <p>
                     Las fronteras <code><s></code> y <code></s></code> permiten al modelo aprender patrones de inicio y fin de oraciones, evitando que se generen n-gramas que mezclen palabras de oraciones distintas. Esto mejora la coherencia del modelo, especialmente en tareas como generación de texto o predicción de la siguiente palabra, ya que respeta la estructura natural del lenguaje.
                 </p>
             </div>
         </div>
 
-        <!-- Sección para mostrar el histograma -->
+        <!-- Histograma -->
         <div th:if="${hasChart}" class="histogram-section">
             <h2 th:text="${chartTitle}">Histograma</h2>
             <img th:src="'data:image/png;base64,' + ${chartImage}" alt="Histograma" class="histogram-img">

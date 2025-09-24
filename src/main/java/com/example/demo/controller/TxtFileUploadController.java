@@ -30,6 +30,47 @@ public class TxtFileUploadController {
 
     private static final String UPLOAD_DIR = "uploads";
 
+    // Mostrar la página principal y restaurar estado si existe
+    @GetMapping("/")
+    public String showMainPage(Model model, HttpSession session) {
+        @SuppressWarnings("unchecked")
+        Map<String, Double> probabilities = (Map<String, Double>) session.getAttribute("probabilities");
+        Integer ngramSize = (Integer) session.getAttribute("ngramSize");
+        Boolean withBoundaries = (Boolean) session.getAttribute("withBoundaries");
+        String tokenizedCorpus = (String) session.getAttribute("tokenizedCorpus");
+        String analysisName = (String) session.getAttribute("analysisName");
+        String chartImage = (String) session.getAttribute("chartImage");
+        String chartTitle = (String) session.getAttribute("chartTitle");
+
+        if (probabilities != null && !probabilities.isEmpty()) {
+            @SuppressWarnings("unchecked")
+            Map<String, Integer> frequencies = (Map<String, Integer>) session.getAttribute("frequencies");
+            if (frequencies == null) frequencies = new HashMap<>();
+
+            Map<String, Integer> sortedFrequencies = frequencies.entrySet().stream()
+                    .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
+                    .collect(Collectors.toMap(
+                            Map.Entry::getKey,
+                            Map.Entry::getValue,
+                            (e1, e2) -> e1,
+                            LinkedHashMap::new
+                    ));
+
+            model.addAttribute("frequencies", sortedFrequencies);
+            model.addAttribute("probabilities", probabilities);
+            model.addAttribute("analysisName", analysisName);
+            model.addAttribute("withBoundaries", withBoundaries);
+            model.addAttribute("actualNgramSize", ngramSize);
+            model.addAttribute("tokenizedCorpus", tokenizedCorpus);
+            model.addAttribute("chartImage", chartImage);
+            model.addAttribute("chartTitle", chartTitle);
+            model.addAttribute("hasResults", true);
+            model.addAttribute("hasChart", chartImage != null);
+        }
+
+        return "index";
+    }
+
     @PostMapping("/uploadTxt")
     public String handleTxtFileUpload(@RequestParam("file") MultipartFile file,
                                       @RequestParam("analysisType") String analysisType,
@@ -76,7 +117,7 @@ public class TxtFileUploadController {
             Map<String, Integer> frequencies;
             Map<String, Double> probabilities = new HashMap<>();
             String analysisName;
-            Integer actualNgramSize = null;
+            Integer actualNgramSize = 1; // valor por defecto seguro
             boolean usedBoundaries = false;
 
             // Generar corpus tokenizado para mostrar
@@ -101,7 +142,10 @@ public class TxtFileUploadController {
             }
 
             String tokenizedCorpus = String.join(" ", tokensToShow);
-            model.addAttribute("tokenizedCorpus", tokenizedCorpus);
+            if (tokensToShow.isEmpty()) {
+                model.addAttribute("error", "El archivo no contiene palabras válidas para el análisis.");
+                return "index";
+            }
 
             if ("ngram".equals(analysisType)) {
                 NgramResult ngramResult = textProcessingService.countNgramFrequencies(lastUploadedText, ngramSize, withBoundaries);
@@ -118,15 +162,22 @@ public class TxtFileUploadController {
                 }
                 analysisName = "Unigramas" + (withBoundaries ? " (con fronteras)" : "");
                 actualNgramSize = 1;
-                usedBoundaries = withBoundaries;
+                usedBoundaries = withBoundaries != null && withBoundaries;
             }
 
-            // ✅ Guardar modelo en SESIÓN (persiste entre peticiones)
+            if (probabilities.isEmpty()) {
+                model.addAttribute("error", "No se pudieron calcular probabilidades (texto sin palabras válidas).");
+                return "index";
+            }
+
+            // ✅ Guardar TODO en sesión para persistencia
+            session.setAttribute("frequencies", frequencies);
             session.setAttribute("probabilities", probabilities);
             session.setAttribute("ngramSize", actualNgramSize);
             session.setAttribute("withBoundaries", usedBoundaries);
+            session.setAttribute("tokenizedCorpus", tokenizedCorpus);
+            session.setAttribute("analysisName", analysisName);
 
-            // Preparar vista
             Map<String, Integer> sortedFrequencies = frequencies.entrySet().stream()
                     .sorted(Map.Entry.<String, Integer>comparingByValue().reversed())
                     .collect(Collectors.toMap(
@@ -143,6 +194,9 @@ public class TxtFileUploadController {
             BufferedImage image = chart.createBufferedImage(1200, 700);
             ImageIO.write(image, "png", baos);
             String base64Image = Base64.getEncoder().encodeToString(baos.toByteArray());
+
+            session.setAttribute("chartImage", base64Image);
+            session.setAttribute("chartTitle", chartTitle);
 
             model.addAttribute("frequencies", sortedFrequencies);
             model.addAttribute("probabilities", probabilities);
@@ -172,24 +226,24 @@ public class TxtFileUploadController {
         model.addAttribute("partialText", partialText);
 
         try {
-            // 🔍 Recuperar modelo de la SESIÓN
             @SuppressWarnings("unchecked")
             Map<String, Double> probabilities = (Map<String, Double>) session.getAttribute("probabilities");
-            Integer ngramSize = (Integer) session.getAttribute("ngramSize");
-            Boolean withBoundaries = (Boolean) session.getAttribute("withBoundaries");
+            Integer ngramSizeAttr = (Integer) session.getAttribute("ngramSize");
+            Boolean withBoundariesAttr = (Boolean) session.getAttribute("withBoundaries");
 
-            // Validar que el modelo exista
-            if (probabilities == null || probabilities.isEmpty() || ngramSize == null) {
+            if (probabilities == null || probabilities.isEmpty() || ngramSizeAttr == null) {
                 model.addAttribute("suggestionError", "Primero debes subir un archivo y entrenar el modelo.");
                 return "index";
             }
 
-            // Llamar al servicio de autocompletado
+            int ngramSize = ngramSizeAttr;
+            boolean withBoundaries = withBoundariesAttr != null && withBoundariesAttr;
+
             AutocompleteService.SuggestionResult result = autocompleteService.suggestNextWord(
                     partialText,
                     probabilities,
                     ngramSize,
-                    Boolean.TRUE.equals(withBoundaries),
+                    withBoundaries,
                     textProcessingService
             );
 
